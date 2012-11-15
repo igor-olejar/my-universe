@@ -1,0 +1,287 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>My Universe - Documentation</title>
+
+<style type='text/css' media='all'>@import url('./docstyle.css');</style>
+<link rel='stylesheet' type='text/css' media='all' href='../userguide.css' />
+
+</head>
+<body>
+
+<!-- START NAVIGATION -->
+<div id="nav"><div id="nav_inner"></div></div>
+<div id="nav2"><a name="top">&nbsp;</a></div>
+<div id="masthead">
+<table cellpadding="0" cellspacing="0" border="0" style="width:100%">
+<tr>
+<td><h1>My Universe</h1></td>
+</tr>
+</table>
+</div>
+<!-- END NAVIGATION -->
+
+<br clear="all" />
+
+
+<!-- START CONTENT -->
+<div id="content">
+	<div class="important">
+		<ul>
+			<li>Facebook application - website with Facebook login button</li>
+			<li>Written in PHP 5.2</li>
+			<li>Database: MySQL</li>
+			<li>Framework: CodeIgniter v. 2.1.2</li>
+			<li>Github: <a href="https://github.com/igor-olejar/my-universe">https://github.com/igor-olejar/my-universe</a></li>
+		</ul>
+	</div>
+	
+	<p>
+		<h2>Application Description</h2>
+		<em>My Universe</em> is a Facebook application, written in PHP using the CodeIgniter framework. Its purpose is to analyse the available
+		Facebook data of the Facebook user and his or her significant other, and produce a list of common photos, videos, wall posts, music, events, likes and
+		checkins. This list can be shared by the user with his or her significant other.
+	</p>
+	
+	<p>
+		<h2>Table of Contents</h2>
+		<ul>
+			<li>Application configuration</li>
+			<li>Facebook permissions (i.e. "scope")</li>
+			<li>Database and Migrations</li>
+			<li>Controllers</li>
+			<li>Methods</li>
+			<li>Views</li>
+			<li>Custom libraries</li>
+			<li>PHPDoc documentation</li>
+		</ul>
+	</p>
+	
+	
+	<p>
+		<h2>Application configuration</h2>
+		The application utilises CodeIgniter's configuration files located in the <em>application/config</em> folder.
+		<h3><em>application/config/autoload.php</em></h3>
+		This file autoloads the following libraries: database, session, facebook, template, form validation.<br />
+		The file also autoloads the following helpers: url, form, array, and html.
+		
+		<h3><em>application/config/database.php</em></h3>
+		This file contains the MySQL database settings (username, password, hostname, etc.).
+		
+		<h3><em>application/config/config.php</em></h3>
+		This is where the general application settings are. This file also contains the <kbd>specific settings</kbd> for the application, which
+		should be changed when deployed:
+		<h4>Application Title</h4>
+		Application title is stored in <dfn>$config['app_title'] = 'My Universe'</dfn>.
+		<h4>Facebook Permissions</h4>
+		<dfn>$config['fb_perms']</dfn> array contains the list of permissions without which the application won't work.
+		<h4>Singles array</h4>
+		<dfn>$config['singles_array']</dfn> contains the list of relationship statuses which are considered as 'single' or 'not in a relationship'.
+		<h4>Music applications</h4>
+		Each music-related application on Facebook has an ID and <dfn>$config['music_apps']</dfn> lists them (see the Timelines model).
+		<h4>Multiple Timelines</h4>
+		The <dfn>$config['multiple']</dfn> switch (TRUE or FALSE) controls whether each user can have multiple entries in the database.
+		<h4>Post Message</h4>
+		The text of the message used when sharing the application link is set here: <dfn>$config['post_message']</dfn>
+		
+		<h3><em>application/config/config.php</em></h3>
+		This file contains the application ID and the 'secret' (provided by Facebook).
+	</p>
+	
+	<p>
+		<h2>Facebook permissions</h2>
+		The application needs to retrieve and analyse a large amount of user's personal data. Therefore, when the user first authorises the application, he or
+		she will have to give the following permissions:
+		<ul>
+			<li>user_about_me</li>
+			<li>user_activities</li>
+			<li>user_status</li>
+			<li>user_events</li>
+			<li>user_likes</li>
+			<li>user_photos</li>
+			<li>user_relationships</li>
+			<li>user_videos</li>
+			<li>user_actions.music</li>
+			<li>user_actions.video</li>
+			<li>user_checkins</li>
+			<li>friends_activities</li>
+			<li>friends_status</li>
+			<li>friends_events</li>
+			<li>friends_likes</li>
+			<li>friends_photos</li>
+			<li>friends_checkins</li>
+			<li>read_stream</li>
+			<li>publish_stream</li>
+		</ul>
+		Without these, the application will not be able to access the necessary data nor post on the user's behalf. This list of permissions is used as the "scope"
+		property in the Facebook login button on the landing page (see Views).
+	</p>
+	
+	<p>
+		<h2>Database and Migrations</h2>
+		The application utilises a MySQL database called "universe" to store the list of shared Facebook activities for later retrieval by the user's partner.
+		In its first version, the database consists of two tables: <dfn>user</dfn> and <dfn>timelines</dfn>. The <dfn>user</dfn> table contains the basic information
+		about the first (the one who creates the list) user, such as name and Facebook user ID.
+		
+		<code>
+			CREATE TABLE IF NOT EXISTS `user` (<br />
+  `id` int(11) unsigned NOT NULL auto_increment,<br />
+  `user_fb_id` varchar(255) character set utf8 collate utf8_unicode_ci NOT NULL,<br />
+  `user_name` varchar(255) character set utf8 collate utf8_unicode_ci NOT NULL,<br />
+  `created_on` timestamp NOT NULL default CURRENT_TIMESTAMP,<br />
+  PRIMARY KEY  (`id`)<br />
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=3 ;<br />
+		</code>
+		
+		The <dfn>timelines</dfn> table contains information on each created common timeline, including partner's name and Facebook ID.
+		<code>
+			CREATE TABLE IF NOT EXISTS `timelines` (<br />
+  `id` int(10) unsigned NOT NULL auto_increment,<br />
+  `hashvalue` varchar(40) character set utf8 collate utf8_unicode_ci NOT NULL,<br />
+  `user_id` int(10) unsigned NOT NULL COMMENT 'Not the FB ID',<br />
+  `partner_fb_id` varchar(255) character set utf8 collate utf8_unicode_ci NOT NULL,<br />
+  `partner_name` varchar(255) character set utf8 collate utf8_unicode_ci NOT NULL,<br />
+  `photos` mediumtext character set utf8 collate utf8_unicode_ci,<br />
+  `videos` mediumtext character set utf8 collate utf8_unicode_ci,<br />
+  `posts` mediumtext character set utf8 collate utf8_unicode_ci,<br />
+  `music` mediumtext character set utf8 collate utf8_unicode_ci,<br />
+  `events` mediumtext character set utf8 collate utf8_unicode_ci,<br />
+  `likes` mediumtext character set utf8 collate utf8_unicode_ci,<br />
+  `checkins` mediumtext character set utf8 collate utf8_unicode_ci,<br />
+  `created` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,<br />
+  PRIMARY KEY  (`id`),<br />
+  KEY `hashvalue` (`hashvalue`),<br />
+  KEY `user_id` (`user_id`)<br />
+) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=8 ;<br />
+		</code>
+		Lists of photos, videos, etc. are stored as serialised arrays.<br /><br />
+		In order to simplify the database installation and track any changes, CodeIgniter's Migrations are used. (see http://codeigniter.com/user_guide/libraries/migration.html).
+		Simply run the Migrate controller (<em>application/controllers/migrate.php</em>) to install the latest version of the database.
+	</p>
+	
+	<p>
+		<h2>Controllers</h2>
+		<h1>Welcome</h1>
+		This is the first controller in the application. It checks whether the user is logged in. If no, the login button is displayed. If yes,
+		the controller gets the user's name, relationship status (via the 'singles' list, as explained Application Configuration), significant other's details,
+		list of friends and displays the <em>select_partner</em> form.<br /><br />
+		This controller is associated with the <em>Welcome_model</em> and <em>landing</em> view.
+		
+		<h1>Animation</h1>
+		Animation controller processes the <em>select_partner</em> form.
+		<ol>
+			<li>Person is 'single': the user must select a friend from the given drop-down menu. Once selected and form submitted, this friend becomes
+			the <em>chosen partner</em>. If no friend is selected, the application displays an error and the form again.</li>
+			<li>
+				Person is 'in relationship': such a user can either continue with the 'significant other' found by the <em>Welcome</em> controller, or
+				choose someone from the list of friends. The 'significant other' found by the <em>Welcome</em> controller becomes the <em>chosen partner</em>
+				 by default. However, if the user chooses someone else from the list of friends, this new person becomes the <em>chosen partner</em>.
+			</li>
+		</ol>
+		
+		<h1>Migrate</h1>
+		This controller is used only for installing the database (explained above) and should be removed from the final installation.
+		
+		<h1>Timelines</h1>
+		This controller queries Facebook and analyses the received data via the <em>Timelines Model</em> (see below). It also has the <dfn>share</dfn> method,
+		which allows the user to share the timelines with the 'chosen partner'.
+		
+		<h1>Show</h1>
+		<em>Show</em> controller uses its <dfn>timeline</dfn> method to read a timeline from the database and show it to the 'chosen partner'. The method receives a
+		hashvalue, which is checked for validity. Each shared timeline is represented by a unique hashvalue.
+		Furthermore, the method checks whether the currently logged-in Facebook user is listed as one of the two people
+		associated with the hashvalue. If not, the landing page is displayed. If yes, the shared timeline is shown.
+	</p>
+	
+	<p>
+		<h2>Models</h2>
+		<h1>Welcome Model</h1>
+		This model is associated with the <em>Welcome</em> controller and has these methods:
+		<h3><dfn>getFbFriends()</dfn></h3>
+		Returns the list of current user's friends.
+		
+		<h3><dfn>previousTimelineExists()</dfn></h3>
+		Determines whether the current user has already created a shared timeline. Returns <dfn>TRUE</dfn> or <dfn>FALSE</dfn>.
+		
+		<h1>Timelines Model</h1>
+		This model queries Facebook for all the data that is to be analysed. It uses a batch request with a combination of FQL and Graph API to optimise the
+		queries. The following are the methods and their logic:
+		
+		<h3><dfn>getData()</dfn></h3>
+		Performs the actual request and dissects the generated <em>json</em> array into following arrays: photos, videos, user_wall, partner_wall, user_music,
+		partner_music, user_events, partner_events, user_likes, partner_likes, and checkins.
+		
+		<h3><dfn>getPhotos()</dfn></h3>
+		Returns the list of photos where both partners are tagged. It goes through the list of user's photos and checks that the photos are posted by either the user or
+		the partner, and that one or both of them are tagged.
+		
+		<h3><dfn>getVideos()</dfn></h3>
+		Operates in the same way as the getPhotos() method.
+		
+		<h3><dfn>getPosts()</dfn></h3>
+		Analyses the user's and partner's walls. For the user, it finds the lists of user's posts where the partner is either tagged, has liked the post or has
+		commented on the post. A reciprocal list is found for the partner. The intersection of the two lists is returned as the list of shared posts.
+		
+		<h3><dfn>getCheckins()</dfn></h3>
+		Returns the list of user's posts ('streams') where either partner is mentioned and the parameter <em>place</em> is not empty (FQL query).
+		
+		<h3><dfn>getLikes()</dfn></h3>
+		Returns the intersection of user's and partner's lists of 'likes' (list of Facebook IDs).
+		
+		<h3><dfn>getEvents()</dfn></h3>
+		Finds the lists of events attended (marked as 'attended' in Facebook) by the user and by the partner. Returns the list of event IDs that exist both the
+		user's and the partner's lists.
+		
+		<h3><dfn>getMusic()</dfn></h3>
+		A music-related post is just a regular post that has app_id which is listed in the <em>config.php</em> file. Similar to the above method, this one
+		finds the list of such posts for the user and the partner and returns the intersection as a list of URLs.
+		
+		<h1>Show Model</h1>
+		This model is associated with the <em>Show controller</em> and has the following methods:
+		<h3><dfn>getData()</dfn></h3>
+		For the given hashvalue, it queries the database and returns arrays of data (photos, videos, likes, etc.).
+		
+		<h3><dfn>checkUserId()</dfn></h3>
+		For the given hashvalue and the current Facebook user ID, it checks whether the user ID is associated with the hashvalue. It checks both the user and the
+		partner IDs. If either matches, it returns <dfn>TRUE</dfn>; otherwise, it returns <dfn>FALSE</dfn>.
+	</p>
+	
+	<p>
+		<h2>Views</h2>
+		Views reside in the <em>application/views/</em> folder, with each view being wrapped by the header and footer, found in <em>application/view/includes/</em>.
+		
+		<h3>landing.php</h3>
+		This is the landing view, shown by the <em>Welcome Controller</em>. It displays the Facebook login button if the user is not logged in, and the
+		<em>select_partner.form.php</em> if the user is logged in.
+		
+		<h3>animation.php</h3>
+		This view shows which partner was chosen and provides the link to the shared timelines. Normally, this view will either be skipped or overlaid by an
+		animation.
+		
+		<h3>timelines.php</h3>
+		Displays the list of Facebook IDs that represent the shared photos, videos, events, etc. It also shows the logout and "share" links.
+		
+		<h3>timeline.php</h3>
+		This view is used by the partner to view the shared timelines. It either displays the Facebook login button (if the user isn't logged in), or the list
+		of shared Facebook IDs (by including the <em>application/views/includes/timeline_details.php</em> sub-view).
+	</p>
+	
+	<p>
+		<h2>Custom libraries</h2>
+		Facebook API is included as a library and is automatically loaded with each controller.<br /><br />
+		A custom <dfn>Template</dfn> class is used to wrap each view with the header and footer automatically.
+	</p>
+	
+
+</div>
+<!-- END CONTENT -->
+
+
+<div id="footer">
+<p>Documentation author: Igor Olejar (igor.olejar@gmail.com)</p>
+</div>
+
+</body>
+</html>
